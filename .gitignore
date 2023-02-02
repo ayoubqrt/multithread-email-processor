@@ -1,0 +1,8 @@
+.vscode
+*.tar
+*.tar.gz
+maildir
+maildircomplete
+threads
+*.txt
+main
