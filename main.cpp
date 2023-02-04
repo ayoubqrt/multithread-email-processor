@@ -11,17 +11,71 @@
 #include <queue>
 #include <map>
 #include <regex>
+#include <bits/stdc++.h>
 
 using namespace std;
 
-string begginingLineSender = "From:";
-string begginingLineRecipient = "To:";
-string begginingLineRecipientCc = "Cc:";
-string begginingLineRecipientBcc = "Bcc:";
+string tagSender = "From:";
+string tagRecipientTo = "To:";
+string tagRecipientCc = "Cc:";
+string tagRecipientBcc = "Bcc:";
 
-bool isTagRecipient(string line)
+string tagMessageId = "Message-ID:";
+string tagDate = "Date:";
+string tagFrom = "From:";
+string tagTo = "To:";
+string tagSubject = "Subject:";
+string tagMimeVersion = "Mime-Version:";
+string tagContentType = "Content-Type:";
+string tagContentTransferEncoding = "Content-Transfer-Encoding:";
+string tagXFrom = "X-From:";
+
+list<string> uselessTags = list<string>{
+		tagMessageId,
+		tagDate,
+		tagFrom,
+		tagTo,
+		tagSubject,
+		tagMimeVersion,
+		tagContentType,
+		tagContentTransferEncoding,
+		tagXFrom};
+
+list<string> tags = list<string>{
+		tagSender,
+		tagRecipientTo,
+		tagRecipientCc,
+		tagRecipientBcc};
+
+void findWithArray(const string &line, const list<string> &tags, string &tagToReturn, size_t &positionEndTag)
 {
-	return line.find(begginingLineRecipient) == 0 || line.find(begginingLineRecipientCc) == 0 || line.find(begginingLineRecipientBcc) == 0;
+	for (const auto &tag : tags)
+	{
+		size_t pos = line.find(tag);
+		if (pos != string::npos)
+		{
+			positionEndTag = pos + tag.size();
+			return;
+		}
+	}
+}
+
+bool find_tag(string line, string &tag, size_t &positionEndTag)
+{
+	findWithArray(line, uselessTags, tag, positionEndTag);
+	bool isTag = positionEndTag == 0;
+
+	return isTag;
+}
+
+bool isTagRecipient(string tag)
+{
+	return tag == tagRecipientTo || tag == tagRecipientCc || tag == tagRecipientBcc;
+}
+
+bool isTagSender(string tag)
+{
+	return tag == tagSender;
 }
 
 // trim from start (in place)
@@ -60,7 +114,10 @@ void getRecipients(const string &line, vector<string> &recipients)
 	while (getline(ss, recipient, ','))
 	{
 		trim(recipient);
-		recipients.push_back(recipient);
+		if (recipient.size() > 0)
+		{
+			recipients.push_back(recipient);
+		}
 	}
 }
 
@@ -68,15 +125,10 @@ vector<thread::id> workingThreadsIds;
 
 map<string, vector<string>> emailAdresses = map<string, vector<string>>();
 
-void writeInFile(vector<string> recipients, string senderMail, thread::id threadId)
+void writeInFile(vector<string> recipients, string senderMail, string threadId)
 {
-	std::ostringstream ss;
-	ss << threadId;
-	string threadIdStr = ss.str();
-
 	ofstream threadFile;
-	filesystem::create_directory("threads/" + threadIdStr);
-	threadFile.open("threads/" + threadIdStr + "/" + senderMail + ".txt", fstream::app);
+	threadFile.open("threads/" + threadId + "/" + senderMail + ".txt", fstream::app);
 
 	for (const auto &recipient : recipients)
 	{
@@ -85,13 +137,18 @@ void writeInFile(vector<string> recipients, string senderMail, thread::id thread
 	threadFile.close();
 }
 
-void parseEmail(const vector<string> &email_files)
+void parseEmail(const vector<string> &emailFiles)
 {
 	thread::id currentThreadId = this_thread::get_id();
+	std::ostringstream ss;
+	ss << currentThreadId;
+	string threadIdStr = ss.str();
 
-	for (const auto &email_file : email_files)
+	filesystem::create_directory("threads/" + threadIdStr);
+
+	for (const auto &email_file : emailFiles)
 	{
-		cout << "Processing " << email_file << endl;
+		// cout << "Processing " << email_file << endl;
 
 		ifstream file(email_file);
 		string line;
@@ -99,10 +156,9 @@ void parseEmail(const vector<string> &email_files)
 		string sender = "";
 		vector<string> recipients;
 
-		bool oldConversationFounded = false;
 		string lastTag = "";
 
-		while (!oldConversationFounded && getline(file, line))
+		while (getline(file, line))
 		{
 			if (line.find("X-From:") == 0)
 			{
@@ -110,109 +166,63 @@ void parseEmail(const vector<string> &email_files)
 			}
 			std::smatch m;
 
-			regex_search(line, m, regex("^[a-zA-Z]*-?[a-zA-Z]*:"));
+			// regex_search(line, m, regex("^[a-zA-Z]*-?[a-zA-Z]*:"));
 			// size_t positionEndTag = line.find(":");
 			// bool isTag = positionEndTag == 0;
-			bool isTag = m.position(0) == 0;
+			// bool isTag = m.position(0) == 0;
 
-			int positionEndTag = m.position(0) + m.length(0);
+			size_t positionEndTag = 0;
+			string tag = "";
 
-			cout << "line: " << line << endl;
-			cout << "isTag: " << isTag << endl;
-			cout << "lastTag: " << lastTag << endl;
-			cout << "positionEndTag: " << positionEndTag << endl;
+			bool isTag = find_tag(line, tag, positionEndTag);
+
+			// int positionEndTag = m.position(0) + m.length(0);
+
+			// cout << "line: " << line << endl;
+			// cout << "isTag: " << isTag << endl;
+			// cout << "lastTag: " << lastTag << endl;
+			// cout << "positionEndTag: " << positionEndTag << endl;
 
 			if (isTag)
 			{
-				lastTag = m[0];
+				// string tag = m[0];
+				lastTag = tag;
 
-				if (line.find(begginingLineSender) == 0)
+				if (isTagSender(tag))
 				{
+					// cout << "isTagSender" << endl;
+
 					sender = line.substr(positionEndTag);
+					trim(sender);
 				}
-				else if (isTagRecipient(line))
+				else if (isTagRecipient(tag))
 				{
-					string line = line.substr(positionEndTag);
-					stringstream ss(line.substr(positionEndTag));
-					string recipient;
-					while (getline(ss, recipient, ','))
-					{
-						trim(recipient);
-						recipients.push_back(recipient);
-					}
+					// cout << "isTagRecipient" << endl;
+					// cout << "line: " << line << endl;
+					// cout << "positionEndTag: " << positionEndTag << endl;
+					string recipientsLine = line.substr(positionEndTag);
+					getRecipients(recipientsLine, recipients);
 				}
 			}
-			else if (lastTag == begginingLineRecipient || lastTag == begginingLineRecipientCc || lastTag == begginingLineRecipientBcc)
+			else if (isTagRecipient(lastTag))
 			{
-				stringstream ss(line);
-				string recipient;
-				while (getline(ss, recipient, ','))
-				{
-					trim(recipient);
-					if (recipient.size() > 0)
-					{
-						recipients.push_back(recipient);
-					}
-				}
+				getRecipients(line, recipients);
 			}
-			cout << " ---- " << endl;
-
-			// cout << oldConversationFounded << endl;
-			/*
-			if (line.find(begginingLineSender) == 0)
-			{
-				sender = line.substr(begginingLineSender.size());
-			}
-			else if (line.find(begginingLineRecipient) == 0)
-			{
-				stringstream ss(line.substr(begginingLineRecipient.size()));
-				string recipient;
-				while (getline(ss, recipient, ','))
-				{
-					recipients.push_back(recipient);
-				}
-			}
-			else if (line.find(begginingLineRecipientCc) == 0)
-			{
-				stringstream ss(line.substr(begginingLineRecipientCc.size()));
-				string recipient;
-				while (getline(ss, recipient, ','))
-				{
-					recipients.push_back(recipient);
-				}
-			}
-			else if (line.find(begginingLineRecipientBcc) == 0)
-			{
-				stringstream ss(line.substr(begginingLineRecipientBcc.size()));
-				string recipient;
-				while (getline(ss, recipient, ','))
-				{
-					recipients.push_back(recipient);
-				}
-			}
-			*/
-
-			// if (sender != "" && recipients.size() > 0)
-			// 	oldConversationFounded = true;
-
-			// if (line.find("Original Message") != -1)
-			// {
-			// 	oldConversationFounded = true;
-			// }
+			// cout << " ---- " << endl;
 		}
 
-		cout << "Sender: " << sender << endl;
-		cout << "Recipients:" << endl;
-		for (const auto &recipient : recipients)
-		{
-			cout << recipient << endl;
-		}
+		// cout << "Sender: " << sender << endl;
+		// cout << "Recipients:" << endl;
+		// for (const auto &recipient : recipients)
+		// {
+		// 	cout << recipient << endl;
+		// }
 		file.close();
 
 		if (sender == "")
 			continue;
 
-		writeInFile(recipients, sender, currentThreadId);
+		writeInFile(recipients, sender, threadIdStr);
 	}
 }
 
@@ -231,26 +241,31 @@ vector<string> slicing(vector<string> &arr, int X, int Y)
 int main()
 {
 	vector<thread> workers;
-	vector<string> email_files = {};
+	vector<string> emailFiles = {};
 	int nbThreads = 8;
+	ios_base::sync_with_stdio(false);
+	cin.tie(NULL);
+
+	filesystem::create_directory("threads");
 
 	for (const auto &entry : filesystem::recursive_directory_iterator("./maildir"))
 	{
 		if (entry.is_regular_file())
 		{
-			email_files.push_back(entry.path().string());
+			emailFiles.push_back(entry.path().string());
 		}
 	}
-	int numberEmailsForEachThread = email_files.size() / 1;
+
+	int numberEmailsForEachThread = (int)(emailFiles.size() / nbThreads);
 
 	for (int i = 0; i < nbThreads; i++)
 	{
 		int start = i * (numberEmailsForEachThread - 1);
 		int end = (i + 1) * (numberEmailsForEachThread - 1);
 		if (i == nbThreads - 1)
-			end = email_files.size() - 1;
+			end = emailFiles.size() - 1;
 
-		vector<string> subPart = slicing(email_files, start, end);
+		vector<string> subPart = slicing(emailFiles, start, end);
 		workers.push_back(thread(parseEmail, subPart));
 	}
 
