@@ -10,14 +10,60 @@
 #include <list>
 #include <queue>
 #include <map>
+#include <regex>
+
 using namespace std;
 
-// mutex mtx; // Mutex pour synchroniser l'accès aux résultats
-// unordered_map<string, unordered_map<string, int>> results;
+string begginingLineSender = "From:";
+string begginingLineRecipient = "To:";
+string begginingLineRecipientCc = "Cc:";
+string begginingLineRecipientBcc = "Bcc:";
 
-// queue<thread::id> workingThreadsIds;
-// list protected by mutex
-// mutex mtx; // Mutex pour synchroniser l'accès aux résultats
+bool isTagRecipient(string line)
+{
+	return line.find(begginingLineRecipient) == 0 || line.find(begginingLineRecipientCc) == 0 || line.find(begginingLineRecipientBcc) == 0;
+}
+
+// trim from start (in place)
+static inline void ltrim(std::string &s)
+{
+	s.erase(s.begin(), std::find_if(s.begin(), s.end(),
+																	std::not1(std::ptr_fun<int, int>(std::isspace))));
+}
+
+// trim from end (in place)
+static inline void rtrim(std::string &s)
+{
+	s.erase(std::find_if(s.rbegin(), s.rend(),
+											 std::not1(std::ptr_fun<int, int>(std::isspace)))
+							.base(),
+					s.end());
+}
+
+// trim from both ends (in place)
+static inline void trim(std::string &s)
+{
+	rtrim(s);
+	ltrim(s);
+}
+
+static inline std::string trim_copy(std::string s)
+{
+	trim(s);
+	return s;
+}
+
+void getRecipients(const string &line, vector<string> &recipients)
+{
+	stringstream ss(line);
+	string recipient;
+	while (getline(ss, recipient, ','))
+	{
+		trim(recipient);
+		recipients.push_back(recipient);
+	}
+}
+
 vector<thread::id> workingThreadsIds;
 
 map<string, vector<string>> emailAdresses = map<string, vector<string>>();
@@ -42,81 +88,132 @@ void writeInFile(vector<string> recipients, string senderMail, thread::id thread
 void parseEmail(const vector<string> &email_files)
 {
 	thread::id currentThreadId = this_thread::get_id();
-	// workingThreadsIds.insert(currentThreadId);
-	// workingThreadsIds.push_back(currentThreadId);
 
-	// iterate on the email files
 	for (const auto &email_file : email_files)
 	{
 		cout << "Processing " << email_file << endl;
+
+		ifstream file(email_file);
+		string line;
+
+		string sender = "";
+		vector<string> recipients;
+
+		bool oldConversationFounded = false;
+		string lastTag = "";
+
+		while (!oldConversationFounded && getline(file, line))
+		{
+			if (line.find("X-From:") == 0)
+			{
+				break;
+			}
+			std::smatch m;
+
+			regex_search(line, m, regex("^[a-zA-Z]*-?[a-zA-Z]*:"));
+			// size_t positionEndTag = line.find(":");
+			// bool isTag = positionEndTag == 0;
+			bool isTag = m.position(0) == 0;
+
+			int positionEndTag = m.position(0) + m.length(0);
+
+			cout << "line: " << line << endl;
+			cout << "isTag: " << isTag << endl;
+			cout << "lastTag: " << lastTag << endl;
+			cout << "positionEndTag: " << positionEndTag << endl;
+
+			if (isTag)
+			{
+				lastTag = m[0];
+
+				if (line.find(begginingLineSender) == 0)
+				{
+					sender = line.substr(positionEndTag);
+				}
+				else if (isTagRecipient(line))
+				{
+					string line = line.substr(positionEndTag);
+					stringstream ss(line.substr(positionEndTag));
+					string recipient;
+					while (getline(ss, recipient, ','))
+					{
+						trim(recipient);
+						recipients.push_back(recipient);
+					}
+				}
+			}
+			else if (lastTag == begginingLineRecipient || lastTag == begginingLineRecipientCc || lastTag == begginingLineRecipientBcc)
+			{
+				stringstream ss(line);
+				string recipient;
+				while (getline(ss, recipient, ','))
+				{
+					trim(recipient);
+					if (recipient.size() > 0)
+					{
+						recipients.push_back(recipient);
+					}
+				}
+			}
+			cout << " ---- " << endl;
+
+			// cout << oldConversationFounded << endl;
+			/*
+			if (line.find(begginingLineSender) == 0)
+			{
+				sender = line.substr(begginingLineSender.size());
+			}
+			else if (line.find(begginingLineRecipient) == 0)
+			{
+				stringstream ss(line.substr(begginingLineRecipient.size()));
+				string recipient;
+				while (getline(ss, recipient, ','))
+				{
+					recipients.push_back(recipient);
+				}
+			}
+			else if (line.find(begginingLineRecipientCc) == 0)
+			{
+				stringstream ss(line.substr(begginingLineRecipientCc.size()));
+				string recipient;
+				while (getline(ss, recipient, ','))
+				{
+					recipients.push_back(recipient);
+				}
+			}
+			else if (line.find(begginingLineRecipientBcc) == 0)
+			{
+				stringstream ss(line.substr(begginingLineRecipientBcc.size()));
+				string recipient;
+				while (getline(ss, recipient, ','))
+				{
+					recipients.push_back(recipient);
+				}
+			}
+			*/
+
+			// if (sender != "" && recipients.size() > 0)
+			// 	oldConversationFounded = true;
+
+			// if (line.find("Original Message") != -1)
+			// {
+			// 	oldConversationFounded = true;
+			// }
+		}
+
+		cout << "Sender: " << sender << endl;
+		cout << "Recipients:" << endl;
+		for (const auto &recipient : recipients)
+		{
+			cout << recipient << endl;
+		}
+		file.close();
+
+		if (sender == "")
+			continue;
+
+		writeInFile(recipients, sender, currentThreadId);
 	}
-
-	/*
-	ifstream email_file(file_name);
-	string line;
-
-	// Variables pour stocker les informations de l'e-mail
-	string sender;
-	vector<string> recipients;
-
-	cout << "Processing " << file_name << endl;
-
-	while (getline(email_file, line))
-	{
-		if (line.find("Original Message") != -1)
-			break;
-		if (line.find("From: ") == 0)
-		{
-			// From: Dean Russell on 01/31/2001 10:49 AM
-			sender = line.substr(6); // Extraire l'expéditeur
-		}
-		else if (line.find("To: ") == 0)
-		{
-			stringstream ss(line.substr(4));
-			string recipient;
-			while (getline(ss, recipient, ','))
-			{
-				recipients.push_back(recipient); // Ajouter les destinataires directs
-			}
-		}
-		else if (line.find("Cc: ") == 0)
-		{
-			stringstream ss(line.substr(4));
-			string recipient;
-			while (getline(ss, recipient, ','))
-			{
-				recipients.push_back(recipient); // Ajouter les destinataires en copie
-			}
-		}
-		else if (line.find("Bcc: ") == 0)
-		{
-			stringstream ss(line.substr(5));
-			string recipient;
-			while (getline(ss, recipient, ','))
-			{
-				recipients.push_back(recipient); // Ajouter les destinataires en copie cachée
-			}
-		}
-	}
-
-	cout << "Sender: " << sender << endl;
-	email_file.close();
-	writeInFile(recipients, sender, currentThreadId);
-	// Ajouter les résultats à la map partagée
-	// lock_guard<mutex> guard(mtx);
-	// for (auto recipient : recipients)
-	// {
-	// 	results[sender][recipient]++;
-	// }
-
-	lock_guard<mutex> guard(mtx);
-	for (int i = 0; i < workingThreadsIds.size(); i++)
-	{
-		if (workingThreadsIds[i] == currentThreadId)
-		{
-			workingThreadsIds.erase(workingThreadsIds.begin() + i);
-		}
-	}*/
 }
 
 vector<string> slicing(vector<string> &arr, int X, int Y)
@@ -133,8 +230,10 @@ vector<string> slicing(vector<string> &arr, int X, int Y)
 
 int main()
 {
-	int threadId = 0;
+	vector<thread> workers;
 	vector<string> email_files = {};
+	int nbThreads = 8;
+
 	for (const auto &entry : filesystem::recursive_directory_iterator("./maildir"))
 	{
 		if (entry.is_regular_file())
@@ -142,79 +241,19 @@ int main()
 			email_files.push_back(entry.path().string());
 		}
 	}
+	int numberEmailsForEachThread = email_files.size() / 1;
 
-	// list<thread> workers = list<thread>(16);
-
-	vector<thread> workers;
-
-	// Créer un thread pour chaque e-mail
-	// for (auto email_file : email_files)
-	// {
-	// 	workers.push_back(thread(parseEmail, email_file));
-	// }
-
-	// create a thread for each mail but limit of 16 threads and wait for the end of the threads and then create new threads
-	// bool isAllEmailsParsed = email_files.size() == 0;
-
-	// while (!isAllEmailsParsed)
-	// {
-	// 	if (workers.size() != 16)
-	// 	{
-	// 		// threadId++;
-	// 		// thread myThread =
-	// 		string emailFile = email_files.front();
-	// 		// thread myThread = thread(parseEmail, emailFile, threadId);
-
-	// 		// create thread
-	// 		thread worker(parseEmail, emailFile);
-	// 		workers.push_back(std::move(worker));
-
-	// 		// workers.insert(pair<thread, int>(myThread, threadId));
-	// 		// workers.insert(pair<thread, int>(myThread, threadId));
-	// 		// workers.insert(, threadId);
-	// 		email_files.pop();
-	// 	}
-
-	// wait for the end of the threads
-	// for (auto it = workers.begin(); it != workers.end(); it++)
-	// {
-	// 	// cout << "size: " << workers.size() << endl;
-	// 	for (int i = 0; i < workingThreadsIds.size(); i++)
-	// 	{
-	// 		if (workingThreadsIds[i] == it->get_id())
-	// 		{
-	// 			// workingThreadsIds.erase(workingThreadsIds.begin() + i);
-	// 			it->detach();
-	// 		}
-	// 	}
-	// }
-
-	// for (auto it = workers.begin(); it != workers.end(); it++)
-	// {
-	// 	if (it->joinable())
-	// 	{
-	// 		it->join();
-	// 		workers.erase(it);
-	// 		break;
-	// 	}
-	// }
-	// }
-
-	int numberEmailsForEachThread = email_files.size() / 8;
-
-	// for (auto email_file : email_files)
-	// {
-
-	// 	workers.push_back(thread(parseEmail, email));
-	// }
-
-	for (int i = 0; i < 8; i++)
+	for (int i = 0; i < nbThreads; i++)
 	{
-		vector<string> subPart = slicing(email_files, i * numberEmailsForEachThread, (i + 1) * numberEmailsForEachThread);
+		int start = i * (numberEmailsForEachThread - 1);
+		int end = (i + 1) * (numberEmailsForEachThread - 1);
+		if (i == nbThreads - 1)
+			end = email_files.size() - 1;
+
+		vector<string> subPart = slicing(email_files, start, end);
 		workers.push_back(thread(parseEmail, subPart));
 	}
 
-	// Attente de la fin des threads
 	for (auto &worker : workers)
 	{
 		worker.join();
