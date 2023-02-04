@@ -30,7 +30,11 @@ string tagContentType = "Content-Type:";
 string tagContentTransferEncoding = "Content-Transfer-Encoding:";
 string tagXFrom = "X-From:";
 
-list<string> uselessTags = list<string>{
+list<string> possibleTags = list<string>{
+		tagSender,
+		tagRecipientTo,
+		tagRecipientCc,
+		tagRecipientBcc,
 		tagMessageId,
 		tagDate,
 		tagFrom,
@@ -41,12 +45,6 @@ list<string> uselessTags = list<string>{
 		tagContentTransferEncoding,
 		tagXFrom};
 
-list<string> tags = list<string>{
-		tagSender,
-		tagRecipientTo,
-		tagRecipientCc,
-		tagRecipientBcc};
-
 void findWithArray(const string &line, const list<string> &tags, string &tagToReturn, size_t &positionEndTag)
 {
 	for (const auto &tag : tags)
@@ -55,6 +53,7 @@ void findWithArray(const string &line, const list<string> &tags, string &tagToRe
 		if (pos != string::npos)
 		{
 			positionEndTag = pos + tag.size();
+			tagToReturn = tag;
 			return;
 		}
 	}
@@ -62,8 +61,8 @@ void findWithArray(const string &line, const list<string> &tags, string &tagToRe
 
 bool find_tag(string line, string &tag, size_t &positionEndTag)
 {
-	findWithArray(line, uselessTags, tag, positionEndTag);
-	bool isTag = positionEndTag == 0;
+	findWithArray(line, possibleTags, tag, positionEndTag);
+	bool isTag = positionEndTag > 0;
 
 	return isTag;
 }
@@ -248,7 +247,7 @@ int main()
 
 	filesystem::create_directory("threads");
 
-	for (const auto &entry : filesystem::recursive_directory_iterator("./maildir"))
+	for (const auto &entry : filesystem::recursive_directory_iterator("./maildircomplete"))
 	{
 		if (entry.is_regular_file())
 		{
@@ -260,8 +259,8 @@ int main()
 
 	for (int i = 0; i < nbThreads; i++)
 	{
-		int start = i * (numberEmailsForEachThread - 1);
-		int end = (i + 1) * (numberEmailsForEachThread - 1);
+		int start = i * (numberEmailsForEachThread);
+		int end = start + numberEmailsForEachThread - 1;
 		if (i == nbThreads - 1)
 			end = emailFiles.size() - 1;
 
