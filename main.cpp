@@ -223,7 +223,7 @@ void parseEmail(const vector<string> &emailFiles)
 		// }
 		file.close();
 
-		if (sender == "")
+		if (sender == "" || recipients.size() == 0)
 			continue;
 
 		writeInFile(recipients, sender, threadIdStr);
