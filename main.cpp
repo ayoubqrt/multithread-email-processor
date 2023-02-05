@@ -106,6 +106,11 @@ static inline std::string trim_copy(std::string s)
 	return s;
 }
 
+bool comparePaths(const filesystem::path &p1, const filesystem::path &p2)
+{
+	return p1.filename() < p2.filename();
+}
+
 void getRecipients(const string &line, vector<string> &recipients)
 {
 	stringstream ss(line);
@@ -241,7 +246,7 @@ void parseThreadsResults()
 		}
 	}
 
-	sort(files.begin(), files.end());
+	sort(files.begin(), files.end(), comparePaths);
 
 	for (const auto &file : files)
 	{
