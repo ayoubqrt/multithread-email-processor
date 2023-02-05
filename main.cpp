@@ -227,6 +227,7 @@ void parseEmail(const vector<string> &emailFiles)
 
 void parseThreadsResults()
 {
+	queue<filesystem::path> filesToProcess;
 	vector<filesystem::path> files;
 	set<string> senders;
 
@@ -237,16 +238,25 @@ void parseThreadsResults()
 		if (entry.is_regular_file())
 		{
 			files.push_back(entry.path());
-			senders.insert(entry.path().filename().string());
 		}
+	}
+
+	sort(files.begin(), files.end());
+
+	for (const auto &file : files)
+	{
+		filesToProcess.push(file);
+		senders.insert(file.filename().string());
 	}
 
 	for (const auto &senderName : senders)
 	{
 		map<string, int> recipients = map<string, int>();
 
-		for (const auto &entry : files)
+		while (!filesToProcess.empty())
 		{
+			filesystem::path entry = filesToProcess.front();
+
 			if (entry.filename().string() == senderName)
 			{
 				ifstream file(entry);
@@ -262,6 +272,11 @@ void parseThreadsResults()
 						recipients[line] = 1;
 					}
 				}
+				filesToProcess.pop();
+			}
+			else
+			{
+				break;
 			}
 		}
 
