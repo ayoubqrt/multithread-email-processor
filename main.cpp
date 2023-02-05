@@ -225,6 +225,55 @@ void parseEmail(const vector<string> &emailFiles)
 	}
 }
 
+void parseThreadsResults()
+{
+	vector<filesystem::path> files;
+	set<string> senders;
+
+	ofstream output_file("results.txt");
+
+	for (const auto &entry : filesystem::recursive_directory_iterator("./threads"))
+	{
+		if (entry.is_regular_file())
+		{
+			files.push_back(entry.path());
+			senders.insert(entry.path().filename().string());
+		}
+	}
+
+	for (const auto &senderName : senders)
+	{
+		map<string, int> recipients = map<string, int>();
+
+		for (const auto &entry : files)
+		{
+			if (entry.filename().string() == senderName)
+			{
+				ifstream file(entry);
+				string line;
+				while (getline(file, line))
+				{
+					if (recipients[line] > 0)
+					{
+						recipients[line] += 1;
+					}
+					else
+					{
+						recipients[line] = 1;
+					}
+				}
+			}
+		}
+
+		output_file << senderName << ": ";
+		for (const auto &recipient : recipients)
+		{
+			output_file << " " << recipient.second << ":" << recipient.first;
+		}
+		output_file << endl;
+	}
+}
+
 vector<string> slicing(vector<string> &arr, int X, int Y)
 {
 	auto start = arr.begin() + X;
@@ -273,6 +322,7 @@ int main()
 		worker.join();
 	}
 
+	parseThreadsResults();
 	cout << "Done" << endl;
 
 	// Enregistrement des résultats dans un fichier
