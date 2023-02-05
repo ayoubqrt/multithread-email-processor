@@ -152,8 +152,6 @@ void parseEmail(const vector<string> &emailFiles)
 
 	for (const auto &email_file : emailFiles)
 	{
-		// cout << "Processing " << email_file << endl;
-
 		ifstream file(email_file);
 		string line;
 
@@ -170,40 +168,23 @@ void parseEmail(const vector<string> &emailFiles)
 			}
 			std::smatch m;
 
-			// regex_search(line, m, regex("^[a-zA-Z]*-?[a-zA-Z]*:"));
-			// size_t positionEndTag = line.find(":");
-			// bool isTag = positionEndTag == 0;
-			// bool isTag = m.position(0) == 0;
-
 			size_t positionEndTag = 0;
 			string tag = "";
 
 			bool isTag = find_tag(line, tag, positionEndTag);
 
-			// int positionEndTag = m.position(0) + m.length(0);
-
-			// cout << "line: " << line << endl;
-			// cout << "isTag: " << isTag << endl;
-			// cout << "lastTag: " << lastTag << endl;
-			// cout << "positionEndTag: " << positionEndTag << endl;
-
 			if (isTag)
 			{
-				// string tag = m[0];
 				lastTag = tag;
 
 				if (isTagSender(tag))
 				{
-					// cout << "isTagSender" << endl;
 
 					sender = line.substr(positionEndTag);
 					trim(sender);
 				}
 				else if (isTagRecipient(tag))
 				{
-					// cout << "isTagRecipient" << endl;
-					// cout << "line: " << line << endl;
-					// cout << "positionEndTag: " << positionEndTag << endl;
 					string recipientsLine = line.substr(positionEndTag);
 					getRecipients(recipientsLine, recipients);
 				}
@@ -212,15 +193,8 @@ void parseEmail(const vector<string> &emailFiles)
 			{
 				getRecipients(line, recipients);
 			}
-			// cout << " ---- " << endl;
 		}
 
-		// cout << "Sender: " << sender << endl;
-		// cout << "Recipients:" << endl;
-		// for (const auto &recipient : recipients)
-		// {
-		// 	cout << recipient << endl;
-		// }
 		file.close();
 
 		if (sender == "" || recipients.size() == 0)
@@ -344,19 +318,6 @@ int main()
 
 	parseThreadsResults();
 	cout << "Done" << endl;
-
-	// Enregistrement des résultats dans un fichier
-	// ofstream output_file("results.txt");
-	// for (auto sender : results)
-	// {
-	// 	output_file << sender.first << ": ";
-	// 	for (auto recipient : sender.second)
-	// 	{
-	// 		output_file << recipient.second << ":" << recipient.first << " ";
-	// 	}
-	// 	output_file << endl;
-	// }
-	// output_file.close();
 
 	return 0;
 }
