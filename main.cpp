@@ -111,7 +111,7 @@ bool comparePaths(const filesystem::path &p1, const filesystem::path &p2)
 	return p1.filename() < p2.filename();
 }
 
-void getRecipients(const string &line, vector<string> &recipients)
+void getRecipients(const string &line, stringstream &recipients)
 {
 	stringstream ss(line);
 	string recipient;
@@ -120,7 +120,7 @@ void getRecipients(const string &line, vector<string> &recipients)
 		trim(recipient);
 		if (recipient.size() > 0)
 		{
-			recipients.push_back(recipient);
+			recipients << recipient << "\n";
 		}
 	}
 }
@@ -129,15 +129,13 @@ vector<thread::id> workingThreadsIds;
 
 map<string, vector<string>> emailAdresses = map<string, vector<string>>();
 
-void writeInFile(vector<string> recipients, string senderMail, string threadId)
+void writeInFile(stringstream &recipients, string senderMail, string threadId)
 {
 	ofstream threadFile;
 	threadFile.open("threads/" + threadId + "/" + senderMail + ".txt", fstream::app);
 
-	for (const auto &recipient : recipients)
-	{
-		threadFile << recipient << endl;
-	}
+	threadFile << recipients.rdbuf();
+
 	threadFile.close();
 }
 
@@ -149,14 +147,14 @@ void parseEmail(const vector<string> &emailFiles)
 	string threadIdStr = ss.str();
 
 	filesystem::create_directory("threads/" + threadIdStr);
-
+	bool isAnyRecipients = false;
 	for (const auto &email_file : emailFiles)
 	{
 		ifstream file(email_file);
 		string line;
 
 		string sender = "";
-		vector<string> recipients;
+		stringstream recipients;
 
 		string lastTag = "";
 
@@ -187,6 +185,7 @@ void parseEmail(const vector<string> &emailFiles)
 				{
 					string recipientsLine = line.substr(positionEndTag);
 					getRecipients(recipientsLine, recipients);
+					isAnyRecipients = true;
 				}
 			}
 			else if (isTagRecipient(lastTag))
@@ -197,7 +196,7 @@ void parseEmail(const vector<string> &emailFiles)
 
 		file.close();
 
-		if (sender == "" || recipients.size() == 0)
+		if (sender == "" || !isAnyRecipients)
 			continue;
 
 		writeInFile(recipients, sender, threadIdStr);
