@@ -39,6 +39,12 @@ void parseThreadsResults()
 		}
 	}
 
+	// sort the files by sender name
+	// useful for the next step
+	// because we will have for example:
+	// sender1.txt sender1.txt sender1.txt sender2.txt sender2.txt
+	// so we don't have to make a research with a double for loop
+	// with a queue we can just pop the first element and check if it's the same sender
 	sort(files.begin(), files.end(), comparePaths);
 
 	for (const auto &file : files)
@@ -96,6 +102,7 @@ int main()
 	vector<shared_ptr<Worker>> workers;
 	vector<string> emailFiles = {};
 
+	// create the threads directory to store the thread results in it
 	filesystem::create_directory("threads");
 
 	for (const auto &entry : filesystem::recursive_directory_iterator("./maildir"))
@@ -115,6 +122,7 @@ int main()
 		if (i == nbThreadsToExecute - 1)
 			end = emailFiles.size() - 1;
 
+		// split the email files between the threads
 		vector<string> subPart = slicing(emailFiles, start, end);
 
 		auto workerPtr = make_shared<Worker>(TaskType::PARSE_EMAIL, subPart);

@@ -2,36 +2,6 @@
 #include <include/Trim.h>
 #include <include/Find.h>
 
-static string tagSender = "From:";
-static string tagRecipientTo = "To:";
-static string tagRecipientCc = "Cc:";
-static string tagRecipientBcc = "Bcc:";
-
-static string tagMessageId = "Message-ID:";
-static string tagDate = "Date:";
-static string tagFrom = "From:";
-static string tagTo = "To:";
-static string tagSubject = "Subject:";
-static string tagMimeVersion = "Mime-Version:";
-static string tagContentType = "Content-Type:";
-static string tagContentTransferEncoding = "Content-Transfer-Encoding:";
-static string tagXFrom = "X-From:";
-
-static list<string> possibleTags = list<string>{
-		tagSender,
-		tagRecipientTo,
-		tagRecipientCc,
-		tagRecipientBcc,
-		tagMessageId,
-		tagDate,
-		tagFrom,
-		tagTo,
-		tagSubject,
-		tagMimeVersion,
-		tagContentType,
-		tagContentTransferEncoding,
-		tagXFrom};
-
 bool isTagRecipient(string tag)
 {
 	return tag == tagRecipientTo || tag == tagRecipientCc || tag == tagRecipientBcc;
@@ -118,6 +88,8 @@ void parseEmail(const vector<string> &emailFiles)
 					isAnyRecipients = find_recipients(recipientsLine, recipients);
 				}
 			}
+			// if last tag was recipient, then we need to find recipients in this line
+			// because it's possible that recipients are in multiple lines (e.g. To: a, b, c) and on next line (d, e, f) without the tag
 			else if (isTagRecipient(lastTag))
 			{
 				find_recipients(line, recipients);
@@ -130,11 +102,6 @@ void parseEmail(const vector<string> &emailFiles)
 		{
 			continue;
 		}
-
-		// if (sender.find("zrzic") > 0)
-		// {
-		// 	cout << recipients.str() << endl;
-		// }
 
 		writeInFile(recipients, sender, threadIdStr);
 	}
