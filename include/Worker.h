@@ -18,7 +18,7 @@ private:
 
 public:
 	Worker(TaskType taskType, vector<string> emailFiles);
-	~Worker();
+	// ~Worker();
 
 	void start();
 };

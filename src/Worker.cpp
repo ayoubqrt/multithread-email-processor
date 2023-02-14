@@ -4,14 +4,16 @@ Worker::Worker(TaskType taskType, vector<string> emailFiles)
 {
 	this->taskType = taskType;
 	this->emailFiles = emailFiles;
+
+	thread myThread = thread(parseEmail, emailFiles);
+	this->workerThread = move(myThread);
 }
 
-Worker::~Worker()
-{
-}
+// Worker::~Worker()
+// {
+// }
 
 void Worker::start()
 {
-	thread thread(parseEmail, emailFiles);
-	this->workerThread = move(thread);
+	this->workerThread.join();
 }

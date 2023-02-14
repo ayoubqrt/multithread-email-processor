@@ -14,6 +14,7 @@
 #include <include/Find.h>
 #include <include/Vector.h>
 #include <include/Trim.h>
+#include <include/Worker.h>
 
 using namespace std;
 
@@ -92,7 +93,7 @@ int main()
 	cin.tie(NULL);
 
 	const auto nbThreadsToExecute = std::thread::hardware_concurrency();
-	vector<thread> workers;
+	vector<Worker> workers;
 	vector<string> emailFiles = {};
 
 	filesystem::create_directory("threads");
@@ -115,12 +116,13 @@ int main()
 			end = emailFiles.size() - 1;
 
 		vector<string> subPart = slicing(emailFiles, start, end);
-		workers.push_back(thread(parseEmail, subPart));
+		Worker worker = Worker(TaskType::PARSE_EMAIL, subPart);
+		workers.push_back(worker);
 	}
 
 	for (auto &worker : workers)
 	{
-		worker.join();
+		worker.start();
 	}
 
 	parseThreadsResults();
