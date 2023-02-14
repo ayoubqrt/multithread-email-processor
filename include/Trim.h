@@ -1,6 +1,4 @@
-#include <string>
-
-using namespace std;
+#pragma once
 
 #include <iostream>
 #include <list>

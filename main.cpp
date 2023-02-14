@@ -93,12 +93,12 @@ int main()
 	cin.tie(NULL);
 
 	const auto nbThreadsToExecute = std::thread::hardware_concurrency();
-	vector<Worker> workers;
+	vector<shared_ptr<Worker>> workers;
 	vector<string> emailFiles = {};
 
 	filesystem::create_directory("threads");
 
-	for (const auto &entry : filesystem::recursive_directory_iterator("./maildircomplete"))
+	for (const auto &entry : filesystem::recursive_directory_iterator("./maildir"))
 	{
 		if (entry.is_regular_file())
 		{
@@ -116,16 +116,19 @@ int main()
 			end = emailFiles.size() - 1;
 
 		vector<string> subPart = slicing(emailFiles, start, end);
-		Worker worker = Worker(TaskType::PARSE_EMAIL, subPart);
-		workers.push_back(worker);
+
+		auto workerPtr = make_shared<Worker>(TaskType::PARSE_EMAIL, subPart);
+
+		workers.push_back(workerPtr);
 	}
 
 	for (auto &worker : workers)
 	{
-		worker.start();
+		worker->start();
 	}
 
 	parseThreadsResults();
+
 	cout << "Done" << endl;
 
 	return 0;

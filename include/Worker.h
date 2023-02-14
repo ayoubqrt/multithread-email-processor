@@ -1,8 +1,12 @@
+#pragma once
+
 #include <iostream>
 #include <thread>
 #include <vector>
+#include <include/Mail.h>
 
 using namespace std;
+
 enum TaskType
 {
 	PARSE_EMAIL
@@ -11,14 +15,15 @@ enum TaskType
 class Worker
 {
 private:
-	vector<string> emailFiles;
-	thread::id currentThreadId;
 	thread workerThread;
 	TaskType taskType;
+	vector<string> emailFiles;
 
 public:
 	Worker(TaskType taskType, vector<string> emailFiles);
-	// ~Worker();
+	Worker(const Worker &worker) = delete;
+	Worker &operator=(const Worker &worker) = delete;
+	~Worker();
 
 	void start();
 };

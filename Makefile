@@ -1,38 +1,18 @@
-CXX      := -g++
-CXXFLAGS := -std=c++17 -pthread -O2
-BUILD    := ./build
-BIN=./bin/
-APP_DIR  := bin
-TARGET   := program
-INCLUDE  := -Iinclude/
-SRC      :=  $(wildcard src/m*.cpp)
+CC=g++
+CXXFLAGS=-O2 -pthread -std=c++17 -I.
+LDFLAGS=
+TARGET=main
 
-OBJECTS  := $(SRC:%.cpp=$(BUILD)/%.o)
-DEPENDENCIES := $(OBJECTS:.o=.d)
+all: $(TARGET) run
 
-all: build $(APP_DIR)/$(TARGET)
+$(TARGET): main.cpp Mail.o Find.o Trim.o Vector.o Worker.o
+	$(CC) $(CXXFLAGS) -o $@ $^
 
-$(BUILD)/%.o: %.cpp
-    @mkdir -p $(@D)
-    $(CXX) $(CXXFLAGS) $(INCLUDE) -c $< -MMD -o $@
-
-$(APP_DIR)/$(TARGET): $(OBJECTS)
-    @mkdir -p $(@D)
-    $(CXX) $(CXXFLAGS) -o $(APP_DIR)/$(TARGET) $^
-
--include $(DEPENDENCIES)
-
-.PHONY: all build clean debug release info
-
-build:
-    @mkdir -p $(APP_DIR)
-    @mkdir -p $(BUILD)
-
-debug: CXXFLAGS += -DDEBUG -g
-debug: all
-
-release: CXXFLAGS += -O2
-release: all
+%.o: src/%.cpp include/%.h
+	$(CC) $(CXXFLAGS) -c -o $@ $<
 
 clean:
-    -@rm -rvf $(BUILD)/*
+	rm -f $(TARGET)
+
+run: $(TARGET)
+	./$(TARGET)

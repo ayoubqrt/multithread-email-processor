@@ -2,6 +2,36 @@
 #include <include/Trim.h>
 #include <include/Find.h>
 
+static string tagSender = "From:";
+static string tagRecipientTo = "To:";
+static string tagRecipientCc = "Cc:";
+static string tagRecipientBcc = "Bcc:";
+
+static string tagMessageId = "Message-ID:";
+static string tagDate = "Date:";
+static string tagFrom = "From:";
+static string tagTo = "To:";
+static string tagSubject = "Subject:";
+static string tagMimeVersion = "Mime-Version:";
+static string tagContentType = "Content-Type:";
+static string tagContentTransferEncoding = "Content-Transfer-Encoding:";
+static string tagXFrom = "X-From:";
+
+static list<string> possibleTags = list<string>{
+		tagSender,
+		tagRecipientTo,
+		tagRecipientCc,
+		tagRecipientBcc,
+		tagMessageId,
+		tagDate,
+		tagFrom,
+		tagTo,
+		tagSubject,
+		tagMimeVersion,
+		tagContentType,
+		tagContentTransferEncoding,
+		tagXFrom};
+
 bool isTagRecipient(string tag)
 {
 	return tag == tagRecipientTo || tag == tagRecipientCc || tag == tagRecipientBcc;
@@ -12,19 +42,24 @@ bool isTagSender(string tag)
 	return tag == tagSender;
 }
 
-void find_recipients(const string &line, stringstream &recipients)
+bool find_recipients(const string &line, stringstream &recipients)
 {
 	stringstream ss(line);
 	string recipient;
+	bool isAnyRecipients = false;
+
 	while (getline(ss, recipient, ','))
 	{
 		trim(recipient);
-		if (recipient.size() > 0)
+		if (recipient != "")
 		{
 			// recipients.push_back(recipient);
 			recipients << recipient << "\n";
+			isAnyRecipients = true;
 		}
 	}
+
+	return isAnyRecipients;
 }
 
 void writeInFile(stringstream &recipients, string senderMail, string threadId)
@@ -80,8 +115,7 @@ void parseEmail(const vector<string> &emailFiles)
 				else if (isTagRecipient(tag))
 				{
 					string recipientsLine = line.substr(positionEndTag);
-					find_recipients(recipientsLine, recipients);
-					isAnyRecipients = true;
+					isAnyRecipients = find_recipients(recipientsLine, recipients);
 				}
 			}
 			else if (isTagRecipient(lastTag))
@@ -92,8 +126,15 @@ void parseEmail(const vector<string> &emailFiles)
 
 		file.close();
 
-		if (sender == "" || !isAnyRecipients)
+		if (!isAnyRecipients || sender == "")
+		{
 			continue;
+		}
+
+		// if (sender.find("zrzic") > 0)
+		// {
+		// 	cout << recipients.str() << endl;
+		// }
 
 		writeInFile(recipients, sender, threadIdStr);
 	}

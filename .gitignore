@@ -6,3 +6,4 @@ maildircomplete
 threads
 *.txt
 main
+*.o
