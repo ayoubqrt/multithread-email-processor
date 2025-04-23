@@ -1,7 +1,7 @@
 L'objectif de l'exercice était de découvrir le multithreading en C++. 
 J'en ai profité pour utiliser les dernières fonctionnalités de C++17, afin d'écrire du code aussi moderne et optimisé que possible. (fonctions lambda, std::list, std::vector, std::thread, move, find)
 
-Résumé fait par ChatGPT car je me souvenais pas exactement ce que faisait cet exercice
+Résumé fait par ChatGPT car je me souvenais pas exactement ce que faisait ce programme
 ---
 
 # **Résumé**
